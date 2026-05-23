@@ -366,33 +366,20 @@ def static_files(path):
     return send_from_directory("static", path)
 
 
-# =============================================================
-# STARTUP
-# =============================================================
 
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
 
+def _startup():
     log.info("=" * 60)
     log.info("FinSight Financial Analysis Platform")
-    log.info(f"URL        : http://localhost:{port}")
     log.info(f"Supabase   : {os.getenv('SUPABASE_BUCKET', 'company-documents')}")
     log.info("=" * 60)
-
-    # Step 1: On startup — scrape all companies (background)
-    # This also auto-triggers extraction when scraping finishes
-    log.info("Step 1: Starting initial scrape of all companies (background)...")
     start_scraping(company_name=None)
-
-    # Step 2: Also run extraction immediately on any already-uploaded PDFs
-    # (in case the server restarted but scraping was done before)
-    log.info("Step 2: Starting extraction for any existing unprocessed PDFs...")
     start_extraction(company_name=None)
-
-    # Step 3: Smart calendar-aware scheduler
-    log.info("Step 3: Starting smart filing calendar scheduler...")
     t = threading.Thread(target=_smart_schedule_loop, daemon=True)
     t.start()
 
-    if __name__ == "__main__":
+_startup()  # runs on both gunicorn import AND direct python
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
