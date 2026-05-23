@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinSight — Fundamental Analysis Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0c0f;
+    --surface:   #111418;
+    --border:    #1e2328;
+    --border2:   #2a3038;
+    --text:      #e8eaed;
+    --muted:     #6b7785;
+    --accent:    #c9a84c;
+    --accent2:   #e8c96e;
+    --green:     #2ecc71;
+    --red:       #e74c3c;
+    --blue:      #3b82f6;
+    --radius:    8px;
+    --font-sans: 'DM Sans', sans-serif;
+    --font-serif:'DM Serif Display', serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+
+  .logo span { color: var(--text); }
+
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.amber { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1.5s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 24px 0;
+    overflow-y: auto;
+  }
+
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 20px 12px;
+  }
+
+  .company-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .company-item:hover {
+    background: rgba(201,168,76,0.06);
+    border-left-color: var(--accent);
+  }
+
+  .company-item.active {
+    background: rgba(201,168,76,0.1);
+    border-left-color: var(--accent);
+  }
+
+  .company-name { font-weight: 500; font-size: 13px; }
+  .company-code { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; }
+
+  .sidebar-empty {
+    padding: 20px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  /* ── Main content ── */
+  .main {
+    padding: 32px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* ── Welcome ── */
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .welcome h1 {
+    font-family: var(--font-serif);
+    font-size: 38px;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .welcome h1 em { color: var(--accent); font-style: italic; }
+
+  .welcome p {
+    color: var(--muted);
+    max-width: 400px;
+    line-height: 1.7;
+  }
+
+  /* ── Company header ── */
+  .company-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+
+  .company-header h2 {
+    font-family: var(--font-serif);
+    font-size: 26px;
+    color: var(--text);
+  }
+
+  .company-meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+  }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text);
+  }
+
+  .stat-value.positive { color: var(--green); }
+  .stat-value.negative { color: var(--red); }
+  .stat-value.accent   { color: var(--accent2); }
+
+  .stat-unit {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ── Verdict box ── */
+  .verdict-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .verdict-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .verdict-text {
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 14px;
+  }
+
+  /* ── Q&A section ── */
+  .qa-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .qa-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .qa-messages {
+    padding: 20px;
+    min-height: 120px;
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .msg {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 90%;
+  }
+
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.bot  { align-self: flex-start; }
+
+  .msg-role {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .msg-bubble {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    line-height: 1.7;
+    font-size: 13.5px;
+  }
+
+  .msg.user .msg-bubble {
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.25);
+    color: var(--text);
+  }
+
+  .msg.bot .msg-bubble {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .msg-sources {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+  }
+
+  /* ── Q&A input ── */
+  .qa-input-row {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .qa-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .qa-input:focus { border-color: var(--accent); }
+  .qa-input::placeholder { color: var(--muted); }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0c0f;
+  }
+
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border2);
+    font-size: 11px;
+    padding: 6px 12px;
+  }
+
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Suggested questions ── */
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .suggestion-chip {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+    font-family: var(--font-sans);
+  }
+
+  .suggestion-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(201,168,76,0.06);
+  }
+
+  /* ── Extraction status banner ── */
+  .extraction-banner {
+    background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+  }
+
+  /* ── Docs list ── */
+  .docs-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .docs-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .doc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+
+  .doc-row:last-child { border-bottom: none; }
+
+  .doc-type { color: var(--text); }
+  .doc-year { color: var(--muted); font-family: var(--font-mono); }
+
+  /* ── Loading spinner ── */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+
+  /* ── Section title ── */
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="logo">Fin<span>Sight</span></div>
+  <div class="status-dot">
+    <div class="dot green" id="serverDot"></div>
+    <span id="serverStatus">Connected</span>
+    &nbsp;&nbsp;
+    <div class="dot" id="extractDot"></div>
+    <span id="extractStatus">Idle</span>
+    &nbsp;&nbsp;
+    <button class="btn btn-outline" onclick="triggerScan()">Scan New PDFs</button>
+  </div>
+</div>
+
+<!-- Layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-label">Companies</div>
+    <div id="companyList">
+      <div class="sidebar-empty">Loading companies...</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="mainContent">
+
+    <!-- Welcome screen -->
+    <div class="welcome" id="welcomeScreen">
+      <h1>Ask anything about<br>any <em>listed company</em></h1>
+      <p>Select a company from the sidebar to view its financial analysis and ask questions in plain English.</p>
+    </div>
+
+    <!-- Company view (hidden until selected) -->
+    <div id="companyView" class="hidden">
+
+      <!-- Extraction banner -->
+      <div class="extraction-banner hidden" id="extractBanner">
+        <span><span class="spinner"></span><span id="extractBannerText">Processing PDFs...</span></span>
+      </div>
+
+      <!-- Company header -->
+      <div class="company-header">
+        <h2 id="viewCompanyName"></h2>
+        <div class="company-meta">
+          <span class="badge" id="viewBSE"></span>
+          <span class="badge" id="viewNSE"></span>
+          <span class="badge" id="viewYear"></span>
+        </div>
+      </div>
+
+      <!-- Verdict -->
+      <div>
+        <div class="section-title">Analyst Verdict</div>
+        <div class="verdict-box">
+          <div class="verdict-title">Financial Health Summary</div>
+          <div class="verdict-text" id="viewVerdict">—</div>
+        </div>
+      </div>
+
+      <!-- Key stats -->
+      <div>
+        <div class="section-title">Key Metrics</div>
+        <div class="stats-grid" id="statsGrid"></div>
+      </div>
+
+      <!-- Documents -->
+      <div class="docs-section">
+        <div class="docs-header">Processed Documents</div>
+        <div id="docsList"></div>
+      </div>
+
+      <!-- Q&A -->
+      <div class="qa-section">
+        <div class="qa-header">Ask a Question</div>
+        <div class="suggestions" id="suggestions"></div>
+        <div class="qa-messages" id="qaMessages">
+          <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">
+            Ask anything about this company's financials
+          </div>
+        </div>
+        <div class="qa-input-row">
+          <input
+            type="text"
+            class="qa-input"
+            id="qaInput"
+            placeholder="e.g. Is this company profitable? What are the main risks?"
+            onkeydown="if(event.key==='Enter') askQuestion()"
+          >
+          <button class="btn btn-primary" id="askBtn" onclick="askQuestion()">Ask</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';  // same origin
+let selectedCompany = null;
+
+const SUGGESTIONS = [
+  'Is this company profitable?',
+  'What are the main risks?',
+  'Is the debt level safe?',
+  'What does management say about the future?',
+  'Should I invest in this company?',
+  'How is revenue growing?',
+];
+
+// ── Init ──────────────────────────────────────────────────
+window.onload = () => {
+  loadCompanies();
+  pollStatus();
+  setInterval(pollStatus, 15000);
+};
+
+// ── Poll server status ────────────────────────────────────
+async function pollStatus() {
+  try {
+    const res  = await fetch(`${API}/api/status`);
+    const data = await res.json();
+    const ext  = data.extraction;
+
+    const dot    = document.getElementById('extractDot');
+    const label  = document.getElementById('extractStatus');
+    const banner = document.getElementById('extractBanner');
+    const btext  = document.getElementById('extractBannerText');
+
+    if (ext.running) {
+      dot.className    = 'dot amber';
+      label.textContent = 'Processing PDFs...';
+      banner.classList.remove('hidden');
+      btext.textContent = ext.message;
+    } else {
+      dot.className     = 'dot green';
+      label.textContent = ext.last_run ? `Last scan: ${ext.last_run}` : 'Ready';
+      banner.classList.add('hidden');
+      // Refresh company list after extraction completes
+      loadCompanies();
+    }
+  } catch (e) {
+    document.getElementById('serverDot').className = 'dot';
+    document.getElementById('serverStatus').textContent = 'Disconnected';
+  }
+}
+
+// ── Load companies ────────────────────────────────────────
+async function loadCompanies() {
+  try {
+    const res  = await fetch(`${API}/api/companies`);
+    const data = await res.json();
+    renderCompanyList(data.companies || []);
+  } catch (e) {
+    document.getElementById('companyList').innerHTML =
+      '<div class="sidebar-empty">Could not load companies.<br>Make sure server is running.</div>';
+  }
+}
+
+function renderCompanyList(companies) {
+  const el = document.getElementById('companyList');
+  if (!companies.length) {
+    el.innerHTML = '<div class="sidebar-empty">No companies yet.<br>PDFs are being processed.<br>Check back in a moment.</div>';
+    return;
+  }
+  el.innerHTML = companies.map(c => `
+    <div class="company-item ${selectedCompany === c.company_name ? 'active' : ''}"
+         onclick="selectCompany('${c.company_name.replace(/'/g,"\\'")}')">
+      <div class="company-name">${c.company_name}</div>
+      <div class="company-code">${c.bse_code || ''} ${c.nse_symbol ? '· '+c.nse_symbol : ''}</div>
+    </div>
+  `).join('');
+}
+
+// ── Select company ────────────────────────────────────────
+async function selectCompany(name) {
+  selectedCompany = name;
+  document.getElementById('welcomeScreen').classList.add('hidden');
+  document.getElementById('companyView').classList.remove('hidden');
+
+  // Update active state
+  document.querySelectorAll('.company-item').forEach(el => {
+    el.classList.toggle('active', el.querySelector('.company-name')?.textContent === name);
+  });
+
+  // Reset Q&A
+  document.getElementById('qaMessages').innerHTML =
+    '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Ask anything about this company\'s financials</div>';
+
+  // Load summary
+  try {
+    const res     = await fetch(`${API}/api/company/${encodeURIComponent(name)}`);
+    const summary = await res.json();
+    renderSummary(summary);
+  } catch (e) {
+    console.error(e);
+  }
+
+  // Load docs
+  try {
+    const res  = await fetch(`${API}/api/company/${encodeURIComponent(name)}/docs`);
+    const data = await res.json();
+    renderDocs(data.docs || []);
+  } catch (e) {}
+
+  // Render suggestions
+  renderSuggestions();
+}
+
+// ── Render company summary ────────────────────────────────
+function renderSummary(s) {
+  document.getElementById('viewCompanyName').textContent = s.company_name || '—';
+  document.getElementById('viewBSE').textContent  = s.bse_code    ? 'BSE: ' + s.bse_code    : '';
+  document.getElementById('viewNSE').textContent  = s.nse_symbol  ? 'NSE: ' + s.nse_symbol  : '';
+  document.getElementById('viewYear').textContent = s.latest_year ? 'FY' + s.latest_year     : '';
+  document.getElementById('viewVerdict').textContent = s.verdict || 'No verdict available.';
+
+  const metrics = [
+    { label: 'Revenue',        value: s.revenue,        unit: 'Cr', type: 'accent' },
+    { label: 'Net Profit',     value: s.net_profit,     unit: 'Cr', type: s.net_profit >= 0 ? 'positive' : 'negative' },
+    { label: 'Net Margin',     value: s.net_margin,     unit: '%',  type: s.net_margin >= 0 ? 'positive' : 'negative' },
+    { label: 'ROE',            value: s.roe,             unit: '%',  type: s.roe >= 0 ? 'positive' : 'negative' },
+    { label: 'ROCE',           value: s.roce,            unit: '%',  type: s.roce >= 0 ? 'positive' : 'negative' },
+    { label: 'Debt / Equity',  value: s.debt_to_equity, unit: 'x',  type: s.debt_to_equity <= 1 ? 'positive' : 'negative' },
+  ];
+
+  document.getElementById('statsGrid').innerHTML = metrics.map(m => `
+    <div class="stat-card">
+      <div class="stat-label">${m.label}</div>
+      <div class="stat-value ${m.type}">${fmt(m.value)}</div>
+      <div class="stat-unit">${m.unit}</div>
+    </div>
+  `).join('');
+}
+
+function fmt(v) {
+  if (v === null || v === undefined) return '—';
+  return Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+
+// ── Render docs ───────────────────────────────────────────
+function renderDocs(docs) {
+  document.getElementById('docsList').innerHTML = docs.length
+    ? docs.map(d => `
+        <div class="doc-row">
+          <span class="doc-type">${d.doc_type || 'Document'}</span>
+          <span class="doc-year">${d.year || ''} ${d.quarter || ''}</span>
+        </div>
+      `).join('')
+    : '<div style="padding:16px 20px;color:var(--muted);font-size:12px;">No documents found</div>';
+}
+
+// ── Render suggestions ────────────────────────────────────
+function renderSuggestions() {
+  document.getElementById('suggestions').innerHTML = SUGGESTIONS.map(s => `
+    <button class="suggestion-chip" onclick="usesuggestion('${s}')">${s}</button>
+  `).join('');
+}
+
+function usesuggestion(text) {
+  document.getElementById('qaInput').value = text;
+  askQuestion();
+}
+
+// ── Ask question ──────────────────────────────────────────
+async function askQuestion() {
+  const input = document.getElementById('qaInput');
+  const btn   = document.getElementById('askBtn');
+  const q     = input.value.trim();
+
+  if (!q || !selectedCompany) return;
+
+  input.value = '';
+  btn.disabled = true;
+
+  // Show user message
+  appendMessage('user', q);
+
+  // Show loading
+  const loadId = appendMessage('bot', '<span class="spinner"></span> Analysing...');
+
+  try {
+    const res  = await fetch(`${API}/api/ask`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ company_name: selectedCompany, question: q }),
+    });
+    const data = await res.json();
+
+    removeMessage(loadId);
+
+    if (data.error) {
+      appendMessage('bot', 'Error: ' + data.error);
+    } else {
+      const sources = data.sources?.map(s => `${s.doc_type} ${s.year}`).join(', ') || '';
+      appendMessage('bot', data.answer, sources ? 'Sources: ' + sources : '');
+    }
+  } catch (e) {
+    removeMessage(loadId);
+    appendMessage('bot', 'Could not reach server. Make sure server.py is running.');
+  }
+
+  btn.disabled = false;
+}
+
+let msgId = 0;
+
+function appendMessage(role, html, sources) {
+  const id   = 'msg-' + (++msgId);
+  const box  = document.getElementById('qaMessages');
+  const div  = document.createElement('div');
+  div.id     = id;
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="msg-role">${role === 'user' ? 'You' : 'FinSight'}</div>
+    <div class="msg-bubble">${html}</div>
+    ${sources ? `<div class="msg-sources">${sources}</div>` : ''}
+  `;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return id;
+}
+
+function removeMessage(id) {
+  document.getElementById(id)?.remove();
+}
+
+// ── Trigger manual scan ───────────────────────────────────
+async function triggerScan() {
+  try {
+    await fetch(`${API}/api/scan`, { method: 'POST' });
+    pollStatus();
+  } catch (e) {
+    alert('Could not reach server');
+  }
+}
+</script>
+</body>
+</html>

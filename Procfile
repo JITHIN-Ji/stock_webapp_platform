@@ -1,0 +1,11 @@
+flask
+flask-cors
+google-genai
+supabase
+python-dotenv
+requests
+pandas
+selenium
+webdriver-manager
+yfinance
+gunicorn
