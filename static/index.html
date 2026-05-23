@@ -36,7 +36,6 @@
     min-height: 100vh;
   }
 
-  /* ── Top bar ── */
   .topbar {
     display: flex;
     align-items: center;
@@ -56,7 +55,6 @@
     color: var(--accent);
     letter-spacing: 0.5px;
   }
-
   .logo span { color: var(--text); }
 
   .status-dot {
@@ -75,20 +73,16 @@
   }
   .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
   .dot.amber { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1.5s infinite; }
+  .dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  /* ── Layout ── */
   .layout {
     display: grid;
     grid-template-columns: 280px 1fr;
     min-height: calc(100vh - 56px);
   }
 
-  /* ── Sidebar ── */
   .sidebar {
     border-right: 1px solid var(--border);
     background: var(--surface);
@@ -111,16 +105,8 @@
     border-left: 3px solid transparent;
     transition: all 0.15s;
   }
-
-  .company-item:hover {
-    background: rgba(201,168,76,0.06);
-    border-left-color: var(--accent);
-  }
-
-  .company-item.active {
-    background: rgba(201,168,76,0.1);
-    border-left-color: var(--accent);
-  }
+  .company-item:hover  { background: rgba(201,168,76,0.06); border-left-color: var(--accent); }
+  .company-item.active { background: rgba(201,168,76,0.1);  border-left-color: var(--accent); }
 
   .company-name { font-weight: 500; font-size: 13px; }
   .company-code { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; }
@@ -132,7 +118,23 @@
     line-height: 1.8;
   }
 
-  /* ── Main content ── */
+  /* ── Activity banner in sidebar ── */
+  .sidebar-activity {
+    margin: 8px 12px 16px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    border: 1px solid rgba(201,168,76,0.25);
+    background: rgba(201,168,76,0.06);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    line-height: 1.7;
+    display: none;
+  }
+  .sidebar-activity.visible { display: block; }
+  .activity-row { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+  .activity-row:last-child { margin-bottom: 0; }
+
   .main {
     padding: 32px;
     overflow-y: auto;
@@ -141,7 +143,6 @@
     gap: 24px;
   }
 
-  /* ── Welcome ── */
   .welcome {
     display: flex;
     flex-direction: column;
@@ -151,336 +152,86 @@
     text-align: center;
     gap: 12px;
   }
-
-  .welcome h1 {
-    font-family: var(--font-serif);
-    font-size: 38px;
-    color: var(--text);
-    line-height: 1.2;
-  }
-
+  .welcome h1 { font-family: var(--font-serif); font-size: 38px; color: var(--text); line-height: 1.2; }
   .welcome h1 em { color: var(--accent); font-style: italic; }
+  .welcome p { color: var(--muted); max-width: 400px; line-height: 1.7; }
 
-  .welcome p {
-    color: var(--muted);
-    max-width: 400px;
-    line-height: 1.7;
-  }
-
-  /* ── Company header ── */
-  .company-header {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 20px;
-  }
-
-  .company-header h2 {
-    font-family: var(--font-serif);
-    font-size: 26px;
-    color: var(--text);
-  }
-
-  .company-meta {
-    display: flex;
-    gap: 16px;
-    margin-top: 8px;
-  }
-
-  .badge {
-    font-size: 11px;
-    font-family: var(--font-mono);
-    padding: 3px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border2);
-    color: var(--muted);
-  }
-
-  /* ── Stats grid ── */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
-  }
-
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
+  /* welcome activity hint */
+  .welcome-activity {
+    margin-top: 24px;
+    padding: 14px 20px;
     border-radius: var(--radius);
-    padding: 16px;
-  }
-
-  .stat-label {
-    font-size: 11px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 6px;
-  }
-
-  .stat-value {
-    font-size: 20px;
-    font-weight: 600;
+    border: 1px solid rgba(201,168,76,0.2);
+    background: rgba(201,168,76,0.05);
+    font-size: 12px;
     font-family: var(--font-mono);
-    color: var(--text);
+    color: var(--accent);
+    line-height: 1.8;
+    max-width: 460px;
+    text-align: left;
+    display: none;
   }
+  .welcome-activity.visible { display: block; }
 
+  .company-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+  .company-header h2 { font-family: var(--font-serif); font-size: 26px; color: var(--text); }
+  .company-meta { display: flex; gap: 16px; margin-top: 8px; }
+  .badge { font-size: 11px; font-family: var(--font-mono); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border2); color: var(--muted); }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .stat-card  { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .stat-value { font-size: 20px; font-weight: 600; font-family: var(--font-mono); color: var(--text); }
   .stat-value.positive { color: var(--green); }
   .stat-value.negative { color: var(--red); }
   .stat-value.accent   { color: var(--accent2); }
+  .stat-unit  { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-  .stat-unit {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
+  .verdict-box  { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 20px; }
+  .verdict-title{ font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .verdict-text { color: var(--text); line-height: 1.8; font-size: 14px; }
 
-  /* ── Verdict box ── */
-  .verdict-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: var(--radius);
-    padding: 20px;
-  }
+  .qa-section  { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .qa-header   { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); }
+  .qa-messages { padding: 20px; min-height: 120px; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 
-  .verdict-title {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 10px;
-  }
-
-  .verdict-text {
-    color: var(--text);
-    line-height: 1.8;
-    font-size: 14px;
-  }
-
-  /* ── Q&A section ── */
-  .qa-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-
-  .qa-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .qa-messages {
-    padding: 20px;
-    min-height: 120px;
-    max-height: 400px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .msg {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-width: 90%;
-  }
-
+  .msg { display: flex; flex-direction: column; gap: 4px; max-width: 90%; }
   .msg.user { align-self: flex-end; align-items: flex-end; }
   .msg.bot  { align-self: flex-start; }
+  .msg-role { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .msg-bubble { padding: 12px 16px; border-radius: var(--radius); line-height: 1.7; font-size: 13.5px; }
+  .msg.user .msg-bubble { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.25); color: var(--text); }
+  .msg.bot  .msg-bubble { background: var(--bg); border: 1px solid var(--border); color: var(--text); }
+  .msg-sources { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
 
-  .msg-role {
-    font-size: 10px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .msg-bubble {
-    padding: 12px 16px;
-    border-radius: var(--radius);
-    line-height: 1.7;
-    font-size: 13.5px;
-  }
-
-  .msg.user .msg-bubble {
-    background: rgba(201,168,76,0.12);
-    border: 1px solid rgba(201,168,76,0.25);
-    color: var(--text);
-  }
-
-  .msg.bot .msg-bubble {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-  }
-
-  .msg-sources {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: var(--font-mono);
-  }
-
-  /* ── Q&A input ── */
-  .qa-input-row {
-    display: flex;
-    gap: 10px;
-    padding: 16px 20px;
-    border-top: 1px solid var(--border);
-    background: var(--bg);
-  }
-
-  .qa-input {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    padding: 10px 14px;
-    color: var(--text);
-    font-family: var(--font-sans);
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
+  .qa-input-row { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); background: var(--bg); }
+  .qa-input { flex: 1; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 10px 14px; color: var(--text); font-family: var(--font-sans); font-size: 13px; outline: none; transition: border-color 0.15s; }
   .qa-input:focus { border-color: var(--accent); }
   .qa-input::placeholder { color: var(--muted); }
 
-  .btn {
-    padding: 10px 20px;
-    border-radius: var(--radius);
-    border: none;
-    font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #0a0c0f;
-  }
-
+  .btn { padding: 10px 20px; border-radius: var(--radius); border: none; font-family: var(--font-sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #0a0c0f; }
   .btn-primary:hover { background: var(--accent2); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .btn-outline {
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border2);
-    font-size: 11px;
-    padding: 6px 12px;
-  }
+  .suggestions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .suggestion-chip { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border2); color: var(--muted); cursor: pointer; transition: all 0.15s; background: transparent; font-family: var(--font-sans); }
+  .suggestion-chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(201,168,76,0.06); }
 
-  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* ── Suggested questions ── */
-  .suggestions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .suggestion-chip {
-    font-size: 12px;
-    padding: 5px 12px;
-    border-radius: 20px;
-    border: 1px solid var(--border2);
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    background: transparent;
-    font-family: var(--font-sans);
-  }
-
-  .suggestion-chip:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(201,168,76,0.06);
-  }
-
-  /* ── Extraction status banner ── */
-  .extraction-banner {
-    background: rgba(201,168,76,0.08);
-    border: 1px solid rgba(201,168,76,0.2);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    font-size: 12px;
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-family: var(--font-mono);
-  }
-
-  /* ── Docs list ── */
-  .docs-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-
-  .docs-header {
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .doc-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-  }
-
+  .docs-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .docs-header  { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); }
+  .doc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid var(--border); font-size: 12px; }
   .doc-row:last-child { border-bottom: none; }
-
   .doc-type { color: var(--text); }
   .doc-year { color: var(--muted); font-family: var(--font-mono); }
 
-  /* ── Loading spinner ── */
-  .spinner {
-    display: inline-block;
-    width: 14px; height: 14px;
-    border: 2px solid var(--border2);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    vertical-align: middle;
-    margin-right: 8px;
-  }
-
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
 
   .hidden { display: none !important; }
 
-  /* ── Section title ── */
-  .section-title {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 10px;
-  }
-
-  /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
@@ -488,7 +239,6 @@
 </head>
 <body>
 
-<!-- Top bar -->
 <div class="topbar">
   <div class="logo">Fin<span>Sight</span></div>
   <div class="status-dot">
@@ -497,40 +247,46 @@
     &nbsp;&nbsp;
     <div class="dot" id="extractDot"></div>
     <span id="extractStatus">Idle</span>
-    &nbsp;&nbsp;
-    <button class="btn btn-outline" onclick="triggerScan()">Scan New PDFs</button>
   </div>
 </div>
 
-<!-- Layout -->
 <div class="layout">
 
-  <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-label">Companies</div>
+
+    <!-- Activity box inside sidebar -->
+    <div class="sidebar-activity" id="sidebarActivity">
+      <div class="activity-row" id="actScrape" style="display:none">
+        <span class="spinner"></span><span id="actScrapeText">Scraping filings...</span>
+      </div>
+      <div class="activity-row" id="actExtract" style="display:none">
+        <span class="spinner"></span><span id="actExtractText">Extracting PDFs...</span>
+      </div>
+      <div style="color:var(--muted);font-size:10px;margin-top:4px;">Companies appear here when ready</div>
+    </div>
+
     <div id="companyList">
       <div class="sidebar-empty">Loading companies...</div>
     </div>
   </div>
 
-  <!-- Main -->
   <div class="main" id="mainContent">
 
-    <!-- Welcome screen -->
     <div class="welcome" id="welcomeScreen">
       <h1>Ask anything about<br>any <em>listed company</em></h1>
       <p>Select a company from the sidebar to view its financial analysis and ask questions in plain English.</p>
+
+      <!-- Activity hint on welcome screen -->
+      <div class="welcome-activity" id="welcomeActivity">
+        <div id="waScrape" style="display:none"><span class="spinner"></span><span id="waScrapeText"></span></div>
+        <div id="waExtract" style="display:none; margin-top:6px"><span class="spinner"></span><span id="waExtractText"></span></div>
+        <div style="color:var(--muted);font-size:10px;margin-top:8px;">Companies will appear in the sidebar once processing completes.</div>
+      </div>
     </div>
 
-    <!-- Company view (hidden until selected) -->
     <div id="companyView" class="hidden">
 
-      <!-- Extraction banner -->
-      <div class="extraction-banner hidden" id="extractBanner">
-        <span><span class="spinner"></span><span id="extractBannerText">Processing PDFs...</span></span>
-      </div>
-
-      <!-- Company header -->
       <div class="company-header">
         <h2 id="viewCompanyName"></h2>
         <div class="company-meta">
@@ -540,7 +296,6 @@
         </div>
       </div>
 
-      <!-- Verdict -->
       <div>
         <div class="section-title">Analyst Verdict</div>
         <div class="verdict-box">
@@ -549,35 +304,26 @@
         </div>
       </div>
 
-      <!-- Key stats -->
       <div>
         <div class="section-title">Key Metrics</div>
         <div class="stats-grid" id="statsGrid"></div>
       </div>
 
-      <!-- Documents -->
       <div class="docs-section">
         <div class="docs-header">Processed Documents</div>
         <div id="docsList"></div>
       </div>
 
-      <!-- Q&A -->
       <div class="qa-section">
         <div class="qa-header">Ask a Question</div>
         <div class="suggestions" id="suggestions"></div>
         <div class="qa-messages" id="qaMessages">
-          <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">
-            Ask anything about this company's financials
-          </div>
+          <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Ask anything about this company's financials</div>
         </div>
         <div class="qa-input-row">
-          <input
-            type="text"
-            class="qa-input"
-            id="qaInput"
+          <input type="text" class="qa-input" id="qaInput"
             placeholder="e.g. Is this company profitable? What are the main risks?"
-            onkeydown="if(event.key==='Enter') askQuestion()"
-          >
+            onkeydown="if(event.key==='Enter') askQuestion()">
           <button class="btn btn-primary" id="askBtn" onclick="askQuestion()">Ask</button>
         </div>
       </div>
@@ -587,7 +333,7 @@
 </div>
 
 <script>
-const API = '';  // same origin
+const API = '';
 let selectedCompany = null;
 
 const SUGGESTIONS = [
@@ -599,44 +345,74 @@ const SUGGESTIONS = [
   'How is revenue growing?',
 ];
 
-// ── Init ──────────────────────────────────────────────────
 window.onload = () => {
   loadCompanies();
   pollStatus();
-  setInterval(pollStatus, 15000);
+  setInterval(pollStatus, 10000);
 };
 
-// ── Poll server status ────────────────────────────────────
 async function pollStatus() {
   try {
     const res  = await fetch(`${API}/api/status`);
     const data = await res.json();
+    const scr  = data.scraping;
     const ext  = data.extraction;
 
-    const dot    = document.getElementById('extractDot');
-    const label  = document.getElementById('extractStatus');
-    const banner = document.getElementById('extractBanner');
-    const btext  = document.getElementById('extractBannerText');
+    // topbar dots
+    const eDot   = document.getElementById('extractDot');
+    const eLabel = document.getElementById('extractStatus');
 
-    if (ext.running) {
-      dot.className    = 'dot amber';
-      label.textContent = 'Processing PDFs...';
-      banner.classList.remove('hidden');
-      btext.textContent = ext.message;
+    const anyActive = scr.running || ext.running;
+
+    if (anyActive) {
+      eDot.className = 'dot amber';
+      eLabel.textContent = scr.running ? 'Scraping...' : 'Extracting...';
     } else {
-      dot.className     = 'dot green';
-      label.textContent = ext.last_run ? `Last scan: ${ext.last_run}` : 'Ready';
-      banner.classList.add('hidden');
-      // Refresh company list after extraction completes
-      loadCompanies();
+      eDot.className = 'dot green';
+      eLabel.textContent = ext.last_run ? `Last scan: ${ext.last_run}` : 'Ready';
     }
+
+    // sidebar activity box
+    const sidebarBox = document.getElementById('sidebarActivity');
+    const actScrape  = document.getElementById('actScrape');
+    const actExtract = document.getElementById('actExtract');
+
+    if (anyActive) {
+      sidebarBox.classList.add('visible');
+      actScrape.style.display  = scr.running ? 'flex' : 'none';
+      actExtract.style.display = ext.running ? 'flex' : 'none';
+      if (scr.running)  document.getElementById('actScrapeText').textContent  = scr.message  || 'Scraping filings from BSE...';
+      if (ext.running)  document.getElementById('actExtractText').textContent = ext.message || 'Extracting data from PDFs...';
+    } else {
+      sidebarBox.classList.remove('visible');
+      actScrape.style.display  = 'none';
+      actExtract.style.display = 'none';
+    }
+
+    // welcome screen activity hint
+    const waBox     = document.getElementById('welcomeActivity');
+    const waScrape  = document.getElementById('waScrape');
+    const waExtract = document.getElementById('waExtract');
+
+    if (anyActive && !selectedCompany) {
+      waBox.classList.add('visible');
+      waScrape.style.display  = scr.running ? 'flex' : 'none';
+      waExtract.style.display = ext.running ? 'flex' : 'none';
+      if (scr.running)  document.getElementById('waScrapeText').textContent  = scr.message  || 'Downloading filings from BSE India...';
+      if (ext.running)  document.getElementById('waExtractText').textContent = ext.message || 'Reading PDFs with AI...';
+    } else {
+      waBox.classList.remove('visible');
+    }
+
+    // refresh list when extraction finishes
+    if (!ext.running) loadCompanies();
+
   } catch (e) {
-    document.getElementById('serverDot').className = 'dot';
+    document.getElementById('serverDot').className = 'dot red';
     document.getElementById('serverStatus').textContent = 'Disconnected';
   }
 }
 
-// ── Load companies ────────────────────────────────────────
 async function loadCompanies() {
   try {
     const res  = await fetch(`${API}/api/companies`);
@@ -644,14 +420,14 @@ async function loadCompanies() {
     renderCompanyList(data.companies || []);
   } catch (e) {
     document.getElementById('companyList').innerHTML =
-      '<div class="sidebar-empty">Could not load companies.<br>Make sure server is running.</div>';
+      '<div class="sidebar-empty">Could not load companies.</div>';
   }
 }
 
 function renderCompanyList(companies) {
   const el = document.getElementById('companyList');
   if (!companies.length) {
-    el.innerHTML = '<div class="sidebar-empty">No companies yet.<br>PDFs are being processed.<br>Check back in a moment.</div>';
+    el.innerHTML = '<div class="sidebar-empty">No companies yet.<br>Processing in background…</div>';
     return;
   }
   el.innerHTML = companies.map(c => `
@@ -663,42 +439,33 @@ function renderCompanyList(companies) {
   `).join('');
 }
 
-// ── Select company ────────────────────────────────────────
 async function selectCompany(name) {
   selectedCompany = name;
   document.getElementById('welcomeScreen').classList.add('hidden');
   document.getElementById('companyView').classList.remove('hidden');
 
-  // Update active state
   document.querySelectorAll('.company-item').forEach(el => {
     el.classList.toggle('active', el.querySelector('.company-name')?.textContent === name);
   });
 
-  // Reset Q&A
   document.getElementById('qaMessages').innerHTML =
     '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Ask anything about this company\'s financials</div>';
 
-  // Load summary
   try {
     const res     = await fetch(`${API}/api/company/${encodeURIComponent(name)}`);
     const summary = await res.json();
     renderSummary(summary);
-  } catch (e) {
-    console.error(e);
-  }
+  } catch (e) { console.error(e); }
 
-  // Load docs
   try {
     const res  = await fetch(`${API}/api/company/${encodeURIComponent(name)}/docs`);
     const data = await res.json();
     renderDocs(data.docs || []);
   } catch (e) {}
 
-  // Render suggestions
   renderSuggestions();
 }
 
-// ── Render company summary ────────────────────────────────
 function renderSummary(s) {
   document.getElementById('viewCompanyName').textContent = s.company_name || '—';
   document.getElementById('viewBSE').textContent  = s.bse_code    ? 'BSE: ' + s.bse_code    : '';
@@ -707,12 +474,12 @@ function renderSummary(s) {
   document.getElementById('viewVerdict').textContent = s.verdict || 'No verdict available.';
 
   const metrics = [
-    { label: 'Revenue',        value: s.revenue,        unit: 'Cr', type: 'accent' },
-    { label: 'Net Profit',     value: s.net_profit,     unit: 'Cr', type: s.net_profit >= 0 ? 'positive' : 'negative' },
-    { label: 'Net Margin',     value: s.net_margin,     unit: '%',  type: s.net_margin >= 0 ? 'positive' : 'negative' },
-    { label: 'ROE',            value: s.roe,             unit: '%',  type: s.roe >= 0 ? 'positive' : 'negative' },
-    { label: 'ROCE',           value: s.roce,            unit: '%',  type: s.roce >= 0 ? 'positive' : 'negative' },
-    { label: 'Debt / Equity',  value: s.debt_to_equity, unit: 'x',  type: s.debt_to_equity <= 1 ? 'positive' : 'negative' },
+    { label: 'Revenue',       value: s.revenue,        unit: 'Cr', type: 'accent' },
+    { label: 'Net Profit',    value: s.net_profit,     unit: 'Cr', type: s.net_profit >= 0 ? 'positive' : 'negative' },
+    { label: 'Net Margin',    value: s.net_margin,     unit: '%',  type: s.net_margin >= 0 ? 'positive' : 'negative' },
+    { label: 'ROE',           value: s.roe,             unit: '%',  type: s.roe >= 0 ? 'positive' : 'negative' },
+    { label: 'ROCE',          value: s.roce,            unit: '%',  type: s.roce >= 0 ? 'positive' : 'negative' },
+    { label: 'Debt / Equity', value: s.debt_to_equity, unit: 'x',  type: s.debt_to_equity <= 1 ? 'positive' : 'negative' },
   ];
 
   document.getElementById('statsGrid').innerHTML = metrics.map(m => `
@@ -729,57 +496,44 @@ function fmt(v) {
   return Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
 
-// ── Render docs ───────────────────────────────────────────
 function renderDocs(docs) {
   document.getElementById('docsList').innerHTML = docs.length
     ? docs.map(d => `
         <div class="doc-row">
           <span class="doc-type">${d.doc_type || 'Document'}</span>
           <span class="doc-year">${d.year || ''} ${d.quarter || ''}</span>
-        </div>
-      `).join('')
+        </div>`).join('')
     : '<div style="padding:16px 20px;color:var(--muted);font-size:12px;">No documents found</div>';
 }
 
-// ── Render suggestions ────────────────────────────────────
 function renderSuggestions() {
   document.getElementById('suggestions').innerHTML = SUGGESTIONS.map(s => `
-    <button class="suggestion-chip" onclick="usesuggestion('${s}')">${s}</button>
+    <button class="suggestion-chip" onclick="useSuggestion('${s}')">${s}</button>
   `).join('');
 }
 
-function usesuggestion(text) {
+function useSuggestion(text) {
   document.getElementById('qaInput').value = text;
   askQuestion();
 }
 
-// ── Ask question ──────────────────────────────────────────
 async function askQuestion() {
   const input = document.getElementById('qaInput');
   const btn   = document.getElementById('askBtn');
   const q     = input.value.trim();
-
   if (!q || !selectedCompany) return;
-
-  input.value = '';
+  input.value  = '';
   btn.disabled = true;
-
-  // Show user message
   appendMessage('user', q);
-
-  // Show loading
   const loadId = appendMessage('bot', '<span class="spinner"></span> Analysing...');
-
   try {
     const res  = await fetch(`${API}/api/ask`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ company_name: selectedCompany, question: q }),
+      body: JSON.stringify({ company_name: selectedCompany, question: q }),
     });
     const data = await res.json();
-
     removeMessage(loadId);
-
     if (data.error) {
       appendMessage('bot', 'Error: ' + data.error);
     } else {
@@ -788,19 +542,18 @@ async function askQuestion() {
     }
   } catch (e) {
     removeMessage(loadId);
-    appendMessage('bot', 'Could not reach server. Make sure server.py is running.');
+    appendMessage('bot', 'Could not reach server.');
   }
-
   btn.disabled = false;
 }
 
 let msgId = 0;
 
 function appendMessage(role, html, sources) {
-  const id   = 'msg-' + (++msgId);
-  const box  = document.getElementById('qaMessages');
-  const div  = document.createElement('div');
-  div.id     = id;
+  const id  = 'msg-' + (++msgId);
+  const box = document.getElementById('qaMessages');
+  const div = document.createElement('div');
+  div.id        = id;
   div.className = `msg ${role}`;
   div.innerHTML = `
     <div class="msg-role">${role === 'user' ? 'You' : 'FinSight'}</div>
@@ -814,16 +567,6 @@ function appendMessage(role, html, sources) {
 
 function removeMessage(id) {
   document.getElementById(id)?.remove();
-}
-
-// ── Trigger manual scan ───────────────────────────────────
-async function triggerScan() {
-  try {
-    await fetch(`${API}/api/scan`, { method: 'POST' });
-    pollStatus();
-  } catch (e) {
-    alert('Could not reach server');
-  }
 }
 </script>
 </body>
