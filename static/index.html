@@ -26,19 +26,49 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; line-height: 1.6; min-height: 100vh; }
 
-  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 56px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 100; }
+  /* ── TOPBAR ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; height: 56px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 200;
+  }
   .logo { font-family: var(--font-serif); font-size: 22px; color: var(--accent); letter-spacing: 0.5px; }
   .logo span { color: var(--text); }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
   .status-dot { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
   .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
   .dot.amber { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1.5s infinite; }
   .dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 56px); }
+  /* Mobile menu toggle button */
+  .menu-toggle {
+    display: none;
+    background: none; border: 1px solid var(--border2);
+    color: var(--text); border-radius: var(--radius);
+    padding: 6px 10px; cursor: pointer; font-size: 18px;
+    line-height: 1;
+  }
 
-  .sidebar { border-right: 1px solid var(--border); background: var(--surface); padding: 24px 0; overflow-y: auto; }
+  /* ── LAYOUT ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 24px 0;
+    overflow-y: auto;
+    /* mobile: hidden by default */
+    transition: transform 0.25s ease;
+  }
   .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 0 20px 12px; }
 
   .sidebar-activity { margin: 8px 12px 16px; padding: 12px 14px; border-radius: var(--radius); border: 1px solid rgba(201,168,76,0.25); background: rgba(201,168,76,0.06); font-size: 11px; font-family: var(--font-mono); color: var(--accent); line-height: 1.7; display: none; }
@@ -53,19 +83,20 @@
   .company-code { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; }
   .sidebar-empty { padding: 20px; color: var(--muted); font-size: 12px; line-height: 1.8; }
 
-  .main { padding: 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+  /* ── MAIN ── */
+  .main { padding: 24px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
 
-  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; gap: 12px; }
-  .welcome h1 { font-family: var(--font-serif); font-size: 38px; color: var(--text); line-height: 1.2; }
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; text-align: center; gap: 12px; padding: 20px; }
+  .welcome h1 { font-family: var(--font-serif); font-size: 32px; color: var(--text); line-height: 1.2; }
   .welcome h1 em { color: var(--accent); font-style: italic; }
   .welcome p { color: var(--muted); max-width: 400px; line-height: 1.7; }
 
   .company-header { border-bottom: 1px solid var(--border); padding-bottom: 20px; }
-  .company-header h2 { font-family: var(--font-serif); font-size: 26px; color: var(--text); }
-  .company-meta { display: flex; gap: 16px; margin-top: 8px; }
+  .company-header h2 { font-family: var(--font-serif); font-size: 22px; color: var(--text); }
+  .company-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .badge { font-size: 11px; font-family: var(--font-mono); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border2); color: var(--muted); }
 
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
   .stat-card  { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
   .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
   .stat-value { font-size: 20px; font-weight: 600; font-family: var(--font-mono); color: var(--text); }
@@ -80,9 +111,9 @@
 
   .qa-section  { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   .qa-header   { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); }
-  .qa-messages { padding: 20px; min-height: 120px; max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+  .qa-messages { padding: 20px; min-height: 120px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 
-  .msg { display: flex; flex-direction: column; gap: 4px; max-width: 90%; }
+  .msg { display: flex; flex-direction: column; gap: 4px; max-width: 92%; }
   .msg.user { align-self: flex-end; align-items: flex-end; }
   .msg.bot  { align-self: flex-start; }
   .msg-role   { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
@@ -91,17 +122,17 @@
   .msg.bot  .msg-bubble { background: var(--bg); border: 1px solid var(--border); color: var(--text); }
   .msg-sources { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
 
-  .qa-input-row { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); background: var(--bg); }
-  .qa-input { flex: 1; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 10px 14px; color: var(--text); font-family: var(--font-sans); font-size: 13px; outline: none; transition: border-color 0.15s; }
+  .qa-input-row { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--bg); }
+  .qa-input { flex: 1; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 10px 14px; color: var(--text); font-family: var(--font-sans); font-size: 13px; outline: none; transition: border-color 0.15s; min-width: 0; }
   .qa-input:focus { border-color: var(--accent); }
   .qa-input::placeholder { color: var(--muted); }
 
-  .btn { padding: 10px 20px; border-radius: var(--radius); border: none; font-family: var(--font-sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .btn { padding: 10px 16px; border-radius: var(--radius); border: none; font-family: var(--font-sans); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .btn-primary { background: var(--accent); color: #0a0c0f; }
   .btn-primary:hover    { background: var(--accent2); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .suggestions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .suggestions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
   .suggestion-chip { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border2); color: var(--muted); cursor: pointer; transition: all 0.15s; background: transparent; font-family: var(--font-sans); }
   .suggestion-chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(201,168,76,0.06); }
 
@@ -117,27 +148,87 @@
 
   .section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
   .hidden { display: none !important; }
+
+  /* Overlay for mobile drawer */
+  .sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0; top: 56px;
+    background: rgba(0,0,0,0.6);
+    z-index: 150;
+  }
+
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .menu-toggle { display: block; }
+
+    /* hide status labels on very small screens */
+    .status-label { display: none; }
+
+    /* full-screen drawer */
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 56px; left: 0; bottom: 0;
+      width: min(280px, 85vw);
+      z-index: 160;
+      transform: translateX(-100%);
+      overflow-y: auto;
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    .sidebar-overlay.open {
+      display: block;
+    }
+
+    .main {
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .welcome h1 { font-size: 26px; }
+
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+    .qa-messages { max-height: 280px; }
+
+    /* topbar tighter */
+    .topbar { padding: 0 12px; }
+    .logo { font-size: 20px; }
+  }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="logo">Fin<span>Sight</span></div>
-  <div class="status-dot">
-    <div class="dot green" id="serverDot"></div>
-    <span id="serverStatus">Connected</span>
-    &nbsp;&nbsp;
-    <div class="dot" id="extractDot"></div>
-    <span id="extractStatus">Idle</span>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="Toggle companies">☰</button>
+    <div class="logo">Fin<span>Sight</span></div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-dot">
+      <div class="dot green" id="serverDot"></div>
+      <span class="status-label" id="serverStatus">Connected</span>
+    </div>
+    <div class="status-dot">
+      <div class="dot" id="extractDot"></div>
+      <span class="status-label" id="extractStatus">Idle</span>
+    </div>
   </div>
 </div>
 
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
 <div class="layout">
 
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-label">Companies</div>
 
     <div class="sidebar-activity" id="sidebarActivity">
@@ -199,7 +290,7 @@
         </div>
         <div class="qa-input-row">
           <input type="text" class="qa-input" id="qaInput"
-            placeholder="e.g. Is this company profitable? What are the main risks?"
+            placeholder="e.g. Is this company profitable?"
             onkeydown="if(event.key==='Enter') askQuestion()">
           <button class="btn btn-primary" id="askBtn" onclick="askQuestion()">Ask</button>
         </div>
@@ -218,9 +309,21 @@ const SUGGESTIONS = [
   'What are the main risks?',
   'Is the debt level safe?',
   'What does management say about the future?',
-  'Should I invest in this company?',
+  'Should I invest?',
   'How is revenue growing?',
 ];
+
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('sidebarOverlay');
+  const open = s.classList.toggle('open');
+  o.classList.toggle('open', open);
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
 
 window.onload = () => {
   loadCompanies();
@@ -234,11 +337,10 @@ async function pollStatus() {
     const data = await res.json();
     const scr  = data.scraping;
     const ext  = data.extraction;
+    const anyActive = scr.running || ext.running;
 
     const eDot   = document.getElementById('extractDot');
     const eLabel = document.getElementById('extractStatus');
-    const anyActive = scr.running || ext.running;
-
     if (anyActive) {
       eDot.className    = 'dot amber';
       eLabel.textContent = scr.running ? 'Scraping...' : 'Extracting...';
@@ -250,7 +352,6 @@ async function pollStatus() {
     const sidebarBox = document.getElementById('sidebarActivity');
     const actScrape  = document.getElementById('actScrape');
     const actExtract = document.getElementById('actExtract');
-
     if (anyActive) {
       sidebarBox.classList.add('visible');
       actScrape.style.display  = scr.running ? 'flex' : 'none';
@@ -299,6 +400,7 @@ function renderCompanyList(companies) {
 
 async function selectCompany(name) {
   selectedCompany = name;
+  closeSidebar();
   document.getElementById('welcomeScreen').classList.add('hidden');
   document.getElementById('companyView').classList.remove('hidden');
 
