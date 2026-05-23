@@ -93,7 +93,7 @@ def fetch_company_data(company_name, year=None, doc_type=None):
         if doc_type:
             query = query.eq("doc_type", doc_type)
 
-        res = query.order("year", desc=True).limit(20).execute()
+        res = query.order("year", desc=True).limit(50).execute()
         return res.data
 
     except Exception as e:
