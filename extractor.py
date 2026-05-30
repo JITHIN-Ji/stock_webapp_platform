@@ -261,6 +261,14 @@ CATEGORY_SIZE_THRESHOLD = {
     "MCA_Documents":        50_000,
 }
 
+CATEGORY_PDF_CAP = {
+    "FinancialStatements": 999,  # all 25 — already filtered
+    "CorporateFilings":     40,
+    "RegulatoryFilings":    20,
+    "StrategicDocuments":   10,
+    "MCA_Documents":        10,
+}
+
 def get_company_pdfs(company_name):
     by_category = {}
     for category in CATEGORIES:
@@ -282,12 +290,17 @@ def get_company_pdfs(company_name):
                     continue
                 paths.append(f"{folder_path}/{name}")
 
+            
             # newest first
             paths = sorted(paths, reverse=True)
+
+            # cap per category
+            cap = CATEGORY_PDF_CAP.get(category, 20)
+            paths = paths[:cap]
+
             if paths:
                 by_category[category] = paths
                 log.info(f"  {category}: {len(paths)} PDFs after filter")
-
         except Exception as e:
             log.warning(f"Could not list {folder_path}: {e}")
     return by_category
