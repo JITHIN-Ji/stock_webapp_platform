@@ -459,7 +459,7 @@ def _startup():
     log.info("=" * 60)
 
     # Only run extraction on startup, not scraping
-    start_extraction(company_name=None)
+    start_extraction(company_name="Adani")
 
     # Start smart scheduler
     t = threading.Thread(target=_smart_schedule_loop, daemon=True)
