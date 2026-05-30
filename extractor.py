@@ -30,7 +30,7 @@ CATEGORIES = [
 ]
 
 # Max PDFs to send to Gemini per batch (to stay within context limits)
-MAX_PDFS_PER_BATCH = 5
+MAX_PDFS_PER_BATCH = 3
 
 
 # ── Prompts per category ──────────────────────────────────────
@@ -253,7 +253,7 @@ def get_all_companies():
 
 
 CATEGORY_SIZE_THRESHOLD = {
-    "FinancialStatements": 200_000,
+    "FinancialStatements": 500_000,
     "CorporateFilings":    100_000,
     "RegulatoryFilings":    50_000,
     "StrategicDocuments":   50_000,
