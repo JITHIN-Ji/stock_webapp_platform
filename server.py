@@ -1,25 +1,3 @@
-"""
-server.py  —  v2
-=================
-Changes from v1:
-  1. INTEGRATED SCRAPING: On startup, triggers both scraping (downloader.py)
-     AND extraction (extractor.py) as background processes per company
-  2. SMART SCHEDULER: Reads filing_calendar table to know WHEN each company
-     is expected to release new documents — only scrapes then, not blindly
-  3. SCRAPE ENDPOINTS: New /api/scrape and /api/scrape/<company> endpoints
-  4. UNIFIED STATE: Single `state` dict tracks both scraping and extraction
-
-API endpoints:
-  GET  /api/status                      → server, scraping & extraction status
-  GET  /api/companies                   → list of companies with data
-  GET  /api/company/<name>              → metrics summary for one company
-  GET  /api/company/<name>/docs         → documents list for one company
-  POST /api/ask                         → Q&A for a specific company
-  POST /api/scan                        → trigger manual extraction scan (all)
-  POST /api/scan/<company>              → trigger extraction for one company
-  POST /api/scrape                      → trigger manual scrape (all companies)
-  POST /api/scrape/<company>            → trigger scrape for one company
-"""
 
 import os
 import logging
@@ -31,8 +9,8 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 
 import extractor
-import qa_engine
-import downloader   # ← NEW: integrated scraper
+import downloader
+import notifier
 
 load_dotenv()
 
@@ -44,18 +22,17 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder="static")
-CORS(app)
-
+CORS(app, origins="*", supports_credentials=True)
 # ── Global state ──────────────────────────────────────────────
 state = {
-    # Scraping state
+    # Scraping
     "scraping":          False,
     "scraping_company":  None,
     "scraping_last_run": None,
     "scraping_message":  "Not started yet",
-    "scraping_results":  [],      # list of per-company result dicts
+    "scraping_results":  [],
 
-    # Extraction state
+    # Extraction
     "extracting":          False,
     "extraction_company":  None,
     "extraction_last_run": None,
@@ -66,24 +43,19 @@ state = {
     "extraction_failed":   0,
 }
 
-# ── Lock to prevent overlapping runs ─────────────────────────
-_scrape_lock    = threading.Lock()
-_extract_lock   = threading.Lock()
+_scrape_lock  = threading.Lock()
+_extract_lock = threading.Lock()
+
 
 # =============================================================
 # SCRAPING BACKGROUND TASK
 # =============================================================
 
-def _run_scraping_background(company_name: str | None = None):
-    """
-    company_name=None  → scrape all companies in catalogue
-    company_name="X"   → scrape only that company
-    """
+def _run_scraping_background(company_name=None):
     with _scrape_lock:
         if state["scraping"]:
             log.info("Scraping already running — skipping")
             return
-
         state["scraping"]         = True
         state["scraping_company"] = company_name or "ALL"
         state["scraping_message"] = (
@@ -102,16 +74,16 @@ def _run_scraping_background(company_name: str | None = None):
             "scraping_company":  None,
             "scraping_last_run": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "scraping_results":  results,
-            "scraping_message":  (
+            "scraping_message": (
                 f"Done — "
-                f"{sum(r.get('uploaded',0) for r in results)} uploaded, "
-                f"{sum(r.get('skipped',0) for r in results)} skipped, "
-                f"{sum(r.get('failed',0) for r in results)} failed"
+                f"{sum(r.get('uploaded', 0) for r in results)} uploaded, "
+                f"{sum(r.get('skipped',  0) for r in results)} skipped, "
+                f"{sum(r.get('failed',   0) for r in results)} failed"
             ),
         })
         log.info(f"Scraping complete: {state['scraping_message']}")
 
-        # After scraping finishes → trigger extraction for the same company
+        # Auto-trigger extraction after scraping
         log.info("Auto-triggering extraction after scraping...")
         start_extraction(company_name=company_name)
 
@@ -124,7 +96,7 @@ def _run_scraping_background(company_name: str | None = None):
         log.error(f"Scraping error: {e}")
 
 
-def start_scraping(company_name: str | None = None):
+def start_scraping(company_name=None):
     t = threading.Thread(
         target=_run_scraping_background,
         args=(company_name,),
@@ -134,20 +106,19 @@ def start_scraping(company_name: str | None = None):
 
 
 # =============================================================
-# EXTRACTION BACKGROUND TASK  (unchanged logic, updated state keys)
+# EXTRACTION BACKGROUND TASK
 # =============================================================
 
-def _run_extraction_background(company_name: str | None = None):
+def _run_extraction_background(company_name=None):
     with _extract_lock:
         if state["extracting"]:
             log.info("Extraction already running — skipping")
             return
-
         state["extracting"]         = True
         state["extraction_company"] = company_name
         state["extraction_message"] = (
             f"Processing PDFs for {company_name}..." if company_name
-            else "Scanning all companies..."
+            else "Processing all companies..."
         )
 
     log.info(f"Extraction started — company: {company_name or 'ALL'}")
@@ -162,8 +133,8 @@ def _run_extraction_background(company_name: str | None = None):
             "extraction_success":  results["success"],
             "extraction_skipped":  results["skipped"],
             "extraction_failed":   results["failed"],
-            "extraction_message":  (
-                f"Done — {results['success']} new, "
+            "extraction_message": (
+                f"Done — {results['success']} processed, "
                 f"{results['skipped']} skipped, "
                 f"{results['failed']} failed"
             ),
@@ -179,7 +150,7 @@ def _run_extraction_background(company_name: str | None = None):
         log.error(f"Extraction error: {e}")
 
 
-def start_extraction(company_name: str | None = None):
+def start_extraction(company_name=None):
     t = threading.Thread(
         target=_run_extraction_background,
         args=(company_name,),
@@ -193,16 +164,11 @@ def start_extraction(company_name: str | None = None):
 # =============================================================
 
 def _smart_schedule_loop():
-    """
-    Runs in background. Every hour checks the filing_calendar table.
-    If any company has `next_expected` ≤ today, triggers a scrape for it.
-    Falls back to a 24-hour full scan if no calendar data exists.
-    """
     FALLBACK_HOURS = 24
     last_fallback  = datetime.datetime.now()
 
     while True:
-        time.sleep(60 * 60)   # check every hour
+        time.sleep(60 * 60)
 
         try:
             calendars = downloader.get_all_filing_calendars()
@@ -220,18 +186,21 @@ def _smart_schedule_loop():
 
                 if next_date <= today:
                     company_name = cal.get("company_name") or cal.get("bse_code")
-                    log.info(f"[SMART SCHEDULE] {company_name} filing expected today ({next_date}) — triggering scrape")
-                    start_scraping(company_name=company_name)
-                    triggered.append(company_name)
+                    bse_code     = cal.get("bse_code")
+                    if not extractor.is_profile_fresh(bse_code, max_age_hours=20):
+                        log.info(f"[SMART SCHEDULE] {company_name} due — triggering scrape")
+                        start_scraping(company_name=company_name)
+                        triggered.append(company_name)
+                    else:
+                        log.info(f"[SMART SCHEDULE] {company_name} profile fresh — skipping")
 
             if triggered:
-                log.info(f"Smart schedule triggered scraping for: {triggered}")
+                log.info(f"Smart schedule triggered for: {triggered}")
             else:
-                # Fallback: if no calendar triggers fired and it's been >24h, do a full scan
                 hours_since = (datetime.datetime.now() - last_fallback).total_seconds() / 3600
                 if hours_since >= FALLBACK_HOURS:
-                    log.info(f"[SMART SCHEDULE] {FALLBACK_HOURS}h fallback scan — no calendar triggers today")
-                    start_scraping(company_name=None)
+                    log.info(f"[SMART SCHEDULE] 24h fallback — full extraction only")
+                    start_extraction(company_name=None)
                     last_fallback = datetime.datetime.now()
 
         except Exception as e:
@@ -247,68 +216,77 @@ def api_status():
     return jsonify({
         "server": "running",
         "scraping": {
-            "running":    state["scraping"],
-            "company":    state["scraping_company"],
-            "last_run":   state["scraping_last_run"],
-            "message":    state["scraping_message"],
-            "results":    state["scraping_results"],
+            "running":  state["scraping"],
+            "company":  state["scraping_company"],
+            "last_run": state["scraping_last_run"],
+            "message":  state["scraping_message"],
+            "results":  state["scraping_results"],
         },
         "extraction": {
-            "running":    state["extracting"],
-            "company":    state["extraction_company"],
-            "last_run":   state["extraction_last_run"],
-            "message":    state["extraction_message"],
-            "total":      state["extraction_total"],
-            "success":    state["extraction_success"],
-            "skipped":    state["extraction_skipped"],
-            "failed":     state["extraction_failed"],
+            "running":  state["extracting"],
+            "company":  state["extraction_company"],
+            "last_run": state["extraction_last_run"],
+            "message":  state["extraction_message"],
+            "total":    state["extraction_total"],
+            "success":  state["extraction_success"],
+            "skipped":  state["extraction_skipped"],
+            "failed":   state["extraction_failed"],
         },
     })
 
 
 @app.route("/api/companies")
 def api_companies():
-    data = qa_engine.get_companies()
+    """
+    Returns a lightweight summary list of all companies from company_profiles.
+    Used by the Welcome page to populate search + chips.
+    """
+    data = extractor.get_all_profiles_summary(status="approved")
     return jsonify({"companies": data, "count": len(data)})
 
 
 @app.route("/api/company/<path:name>")
 def api_company(name):
-    summary = qa_engine.get_company_summary(name)
-    if not summary:
+
+    profile = extractor.get_company_profile(name)
+
+    if not profile:
         return jsonify({"error": f"No data found for '{name}'"}), 404
+
+    # ONLY APPROVED
+    if profile.get("status") != "approved":
+        return jsonify({"error": "Company not approved"}), 403
+
+    summary = {k: v for k, v in profile.items() if k != "full_data"}
+
     return jsonify(summary)
 
 
-@app.route("/api/company/<path:name>/docs")
-def api_company_docs(name):
-    docs = qa_engine.get_company_docs(name)
-    return jsonify({"docs": docs, "count": len(docs)})
+@app.route("/api/company/<path:name>/profile")
+def api_company_profile(name):
 
+    profile = extractor.get_company_profile(name)
 
-@app.route("/api/ask", methods=["POST"])
-def api_ask():
-    body         = request.get_json() or {}
-    company_name = (body.get("company_name") or "").strip()
-    question     = (body.get("question") or "").strip()
-    year         = body.get("year")
-    doc_type     = body.get("doc_type")
+    if not profile:
+        return jsonify({"error": f"No profile found for '{name}'"}), 404
 
-    if not company_name or not question:
-        return jsonify({"error": "company_name and question are required"}), 400
+    # ONLY APPROVED
+    if profile.get("status") != "approved":
+        return jsonify({"error": "Company not approved"}), 403
 
-    log.info(f"Q&A → company='{company_name}' question='{question}'")
-    result = qa_engine.answer_question(company_name, question, year=year, doc_type=doc_type)
+    result = {k: v for k, v in profile.items() if k != "full_data"}
+
     return jsonify(result)
 
 
-# ── Extraction triggers (kept from v1) ────────────────────────
+# ── Extraction triggers ───────────────────────────────────────
+
 @app.route("/api/scan", methods=["POST"])
 def api_scan():
     if state["extracting"]:
         return jsonify({"message": "Extraction already running"}), 409
     start_extraction(company_name=None)
-    return jsonify({"message": "Extraction scan started for all companies"})
+    return jsonify({"message": "Extraction started for all companies"})
 
 
 @app.route("/api/scan/<path:company_name>", methods=["POST"])
@@ -316,13 +294,13 @@ def api_scan_company(company_name):
     if state["extracting"]:
         return jsonify({"message": "Extraction already running"}), 409
     start_extraction(company_name=company_name)
-    return jsonify({"message": f"Extraction scan started for '{company_name}'"})
+    return jsonify({"message": f"Extraction started for '{company_name}'"})
 
 
-# ── Scraping triggers (NEW) ───────────────────────────────────
+# ── Scraping triggers ─────────────────────────────────────────
+
 @app.route("/api/scrape", methods=["POST"])
 def api_scrape():
-    """Trigger a full scrape of all companies."""
     if state["scraping"]:
         return jsonify({"message": "Scraping already running"}), 409
     start_scraping(company_name=None)
@@ -331,24 +309,22 @@ def api_scrape():
 
 @app.route("/api/scrape/<path:company_name>", methods=["POST"])
 def api_scrape_company(company_name):
-    """Trigger scrape for a single company, then auto-extract."""
     if state["scraping"]:
         return jsonify({"message": "Scraping already running"}), 409
     start_scraping(company_name=company_name)
     return jsonify({"message": f"Scraping started for '{company_name}'"})
 
 
-# ── Filing calendar info ──────────────────────────────────────
+# ── Filing calendar ───────────────────────────────────────────
+
 @app.route("/api/calendar")
 def api_calendar():
-    """Returns all filing calendar entries — useful for the frontend scheduler view."""
     calendars = downloader.get_all_filing_calendars()
     return jsonify({"calendars": calendars, "count": len(calendars)})
 
 
 @app.route("/api/calendar/<path:company_name>")
 def api_calendar_company(company_name):
-    """Returns filing calendar for one company."""
     resolved = downloader._resolve_company(company_name)
     if not resolved:
         return jsonify({"error": f"Unknown company: {company_name}"}), 404
@@ -356,7 +332,105 @@ def api_calendar_company(company_name):
     return jsonify(cal or {})
 
 
-# ── Frontend ──────────────────────────────────────────────────
+@app.route("/api/approve/<token>")
+def api_approve(token):
+    """One-click approve link from email."""
+    success, action, company_name = notifier.process_approval(
+        token=token,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get("User-Agent", "")
+    )
+    if not success:
+        return _approval_response_html(
+            "Link invalid or expired",
+            "This link has already been used or has expired (7-day limit). "
+            "Re-run extraction to generate a new review email.",
+            success=False
+        )
+    return _approval_response_html(
+        f"✓ {company_name} approved",
+        "The company profile is now visible in the FinSight UI.",
+        success=True
+    )
+
+
+@app.route("/api/reject/<token>")
+def api_reject(token):
+    """One-click reject link from email."""
+    success, action, company_name = notifier.process_approval(
+        token=token,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get("User-Agent", "")
+    )
+    if not success:
+        return _approval_response_html(
+            "Link invalid or expired",
+            "This link has already been used or has expired (7-day limit). "
+            "Re-run extraction to generate a new review email.",
+            success=False
+        )
+    return _approval_response_html(
+        f"✗ {company_name} rejected",
+        "The company profile has been hidden from the FinSight UI. "
+        "You can re-run extraction and approve it later.",
+        success=False
+    )
+
+
+@app.route("/api/email-reply", methods=["POST"])
+def api_email_reply():
+    """
+    SendGrid Inbound Parse webhook.
+    Called when master replies to rejection email.
+    """
+    # SendGrid posts these fields
+    sender  = request.form.get("from", "")
+    subject = request.form.get("subject", "")
+    body    = request.form.get("text", "")    # plain text
+    
+    if not body:
+        body = request.form.get("html", "")   # fallback to html
+
+    log.info(f"Inbound reply — from: {sender} | subject: {subject}")
+
+    if not sender or not subject:
+        return jsonify({"status": "ignored"}), 200
+
+    # process in background
+    import threading
+    from notifier import process_inbound_reply
+    threading.Thread(
+        target=process_inbound_reply,
+        args=(sender, subject, body),
+        daemon=True
+    ).start()
+
+    # must return 200 fast — SendGrid retries if timeout
+    return jsonify({"status": "received"}), 200
+
+
+def _approval_response_html(title: str, message: str, success: bool) -> str:
+    """Simple HTML confirmation page shown after approve/reject click."""
+    color  = "#1a7f4b" if success else "#c0392b"
+    icon   = "✓" if success else "✗"
+    return f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>FinSight — {title}</title></head>
+<body style="font-family: Arial, sans-serif; display: flex; align-items: center;
+             justify-content: center; min-height: 100vh; margin: 0; background: #f5f5f5;">
+  <div style="background: #fff; border-radius: 12px; padding: 48px 40px;
+              max-width: 460px; text-align: center; border: 1px solid #e0e0e0;">
+    <div style="font-size: 48px; color: {color}; margin-bottom: 16px;">{icon}</div>
+    <h2 style="margin: 0 0 12px; color: #1a1a1a;">{title}</h2>
+    <p style="color: #555; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">{message}</p>
+    <a href="/" style="font-size: 13px; color: #888; text-decoration: none;">← Back to FinSight</a>
+  </div>
+</body>
+</html>"""
+
+
+# ── Frontend static files ─────────────────────────────────────
+
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
@@ -366,19 +440,26 @@ def static_files(path):
     return send_from_directory("static", path)
 
 
-
+# =============================================================
+# STARTUP
+# =============================================================
 
 def _startup():
     log.info("=" * 60)
-    log.info("FinSight Financial Analysis Platform")
-    log.info(f"Supabase   : {os.getenv('SUPABASE_BUCKET', 'company-documents')}")
+    log.info("FinSight Financial Analysis Platform  v3")
+    log.info(f"Supabase bucket: {os.getenv('SUPABASE_BUCKET', 'company-documents')}")
+    log.info("QA engine: REMOVED — using company_profiles table")
     log.info("=" * 60)
-    start_scraping(company_name=None)
+
+    # Only run extraction on startup, not scraping
     start_extraction(company_name=None)
+
+    # Start smart scheduler
     t = threading.Thread(target=_smart_schedule_loop, daemon=True)
     t.start()
 
-_startup()  # runs on both gunicorn import AND direct python
+
+_startup()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))

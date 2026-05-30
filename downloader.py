@@ -163,6 +163,21 @@ def ensure_bucket():
         raise
 
 
+def _get_existing_files(company_prefix):
+    """Fetch all existing filenames from Supabase ONCE per scrape."""
+    existing = set()
+    for doc in ALL_DOCUMENTS.values():
+        folder = f"{company_prefix}/{doc['category']}"
+        try:
+            files = SUPABASE.storage.from_(SUPABASE_BUCKET).list(folder)
+            for f in files:
+                existing.add(f["name"])
+        except Exception:
+            pass
+    log.info(f"  Existing files in Supabase: {len(existing)}")
+    return existing
+
+
 def upload_to_supabase(content: bytes, storage_path: str,
                        content_type: str = "application/pdf",
                        counters: dict = None) -> bool:
@@ -172,7 +187,7 @@ def upload_to_supabase(content: bytes, storage_path: str,
         SUPABASE.storage.from_(SUPABASE_BUCKET).upload(
             path=storage_path,
             file=content,               # ← just pass bytes
-            file_options={"content-type": content_type, "x-upsert": "false"},
+            file_options={"content-type": content_type, "x-upsert": "true"},
         )
         kb = len(content) // 1024
         log.info(f"Uploaded: {storage_path} ({kb} KB)")
@@ -419,7 +434,8 @@ def _fetch_bse_filings(bse_code: str, doc_name: str, from_dt: str,
 
 def _download_bse_api(company: dict, doc_name: str, category: str,
                       from_dt: str, to_dt: str, company_prefix: str,
-                      counters: dict, max_files=2000) -> list:
+                      counters: dict, existing_files: set,
+                      max_files=2000) -> list:
     """Download via BSE API, upload to Supabase. Returns raw filings for calendar."""
     filings = _fetch_bse_filings(company["bse_code"], doc_name, from_dt, to_dt)
     if not filings:
@@ -427,6 +443,7 @@ def _download_bse_api(company: dict, doc_name: str, category: str,
         return []
 
     log.info(f"  {doc_name}: {len(filings)} filings found")
+    seen_files = set()
 
     for filing in filings[:max_files]:
         att_name = filing.get("ATTACHMENTNAME", "").strip()
@@ -437,7 +454,15 @@ def _download_bse_api(company: dict, doc_name: str, category: str,
         if not att_name:
             continue
 
-        fname        = f"{news_dt}_{news_id}_{headline}.pdf"
+        fname = f"{news_dt}_{news_id}_{headline}.pdf"
+        if fname in seen_files:
+            log.debug(f"Duplicate filing in same run: {fname}")
+            continue
+        seen_files.add(fname)
+
+        if fname in existing_files:
+            log.info(f"  Existing filename detected, re-uploading if changed: {fname}")
+
         storage_path = f"{company_prefix}/{category}/{fname}"
 
         for pdf_url in _pdf_urls(att_name):
@@ -472,14 +497,14 @@ def _download_annual_report(company: dict, category: str,
         return []
 
     filings = resp.json().get("Table", [])
-    for filing in filings:
+    for i, filing in enumerate(filings):
         att_name = filing.get("ATTACHMENTNAME", "").strip()
         news_dt  = _parse_bse_date(filing.get("NEWS_DT", ""))
         year     = news_dt[:4] if news_dt else "Unknown"
         headline = _safe_filename(filing.get("NEWSSUB", "AnnualReport"), 40)
         if not att_name:
             continue
-        fname        = f"AnnualReport_{year}_{headline}.pdf"
+        fname        = f"AnnualReport_{year}_{i+1:02d}_{headline}.pdf"
         storage_path = f"{company_prefix}/{category}/{fname}"
         for pdf_url in [
             f"https://www.bseindia.com/xml-data/corpfiling/AttachHis/{att_name}",
@@ -672,6 +697,8 @@ def run_scraping(
     # ── Warm up BSE ──────────────────────────────────────────
     _warm_up_bse()
 
+    existing_files = _get_existing_files(company_prefix)
+
     counters   = {"uploaded": 0, "skipped": 0, "failed": 0}
     all_filings_pool = []   # collect all filing metadata for calendar analysis
     selected   = doc_ids if doc_ids else DEFAULT_DOC_IDS
@@ -698,7 +725,7 @@ def run_scraping(
             all_filings_pool.extend(filings)
 
         else:
-            filings = _download_bse_api(company, name, cat, from_dt, to_dt, company_prefix, counters)
+            filings = _download_bse_api(company, name, cat, from_dt, to_dt, company_prefix, counters, existing_files)
             if not filings:
                 # Fallback to Selenium
                 _download_selenium(company, name, cat, company_prefix, counters)
