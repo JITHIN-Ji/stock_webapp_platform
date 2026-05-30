@@ -734,6 +734,23 @@ def run_scraping(
 
         time.sleep(2)
 
+    if counters.get("uploaded", 0) > 0:
+        try:
+            sb = SUPABASE
+            sb.table("company_profiles") \
+                .update({
+                    "status":          "pending",
+                    "rejection_count": 0,
+                    "master_feedback": None,
+                    "holder_feedback": None,
+                }) \
+                .eq("bse_code", company["bse_code"]) \
+                .execute()
+            log.info(f"Status set to pending for BSE:{company['bse_code']}")
+        except Exception as e:
+            log.warning(f"Could not set pending status: {e}")
+        
+
     # ── Analyse filing calendar from collected metadata ──────
     analyse_filing_dates(company["bse_code"], all_filings_pool)
     calendar = get_filing_calendar(company["bse_code"]) or {}

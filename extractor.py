@@ -645,9 +645,21 @@ def save_company_profile(profile, rejection_count: int = 0):
     if not company_name and not bse_code:
         log.warning("No company_name or bse_code in profile — skipping save")
         return
-    # Always reset to pending on every new extraction
-    # regardless of previous status
-    new_status = "pending"
+    
+    try:
+        existing = supabase.table("company_profiles") \
+            .select("status") \
+            .eq("bse_code", bse_code) \
+            .limit(1).execute()
+        current_status = existing.data[0].get("status") \
+            if existing.data else None
+        # downloader already set pending if new PDFs
+        # if status already pending → keep pending
+        # if approved + no new PDFs → keep approved
+        new_status = current_status if current_status in \
+            ("pending", "rejected") else "pending"
+    except Exception:
+        new_status = "pending"
 
     row = {
         "company_name":         company_name,
@@ -691,8 +703,11 @@ def save_company_profile(profile, rejection_count: int = 0):
         "recent_announcements": profile.get("recent_announcements") or [],
         "employee_data":        profile.get("employee_data") or {},
         "full_data":            profile,
-        "status":              new_status,
-    }
+        "status":          new_status,
+        "rejection_count": 0,
+        "master_feedback": None,
+        "holder_feedback": None,
+    }   
 
     try:
         supabase.table("company_profiles").upsert(
@@ -773,9 +788,12 @@ def run_extraction(company_name=None, force=False):
         log.info(f"=== Extracting: {company} ===")
 
         try:
-            # Check if already fresh (skip unless forced)
-            # We don't have bse_code here easily, so skip freshness check
-            # and let server.py decide via the force flag
+            # Skip if profile fresh within 24 hours
+            if not force and is_profile_fresh(company, max_age_hours=24):
+                log.info(f"  {company} fresh — skipping")
+                results["skipped"] += 1
+                continue
+
 
             # Get all PDFs grouped by category
             pdfs_by_category = get_company_pdfs(company)
@@ -951,11 +969,28 @@ def regenerate_with_feedback(bse_code: str, feedback: str,
         return
 
     # force correct fields
-    improved["bse_code"]  = bse_code
-    improved["status"]    = "pending"
+    
+    improved["bse_code"]    = bse_code
+    improved["status"]      = "pending"
     if not improved.get("company_name"):
         improved["company_name"] = profile.get("company_name", "")
 
+    # override save_company_profile status logic
+    # must be pending for regeneration always
+    try:
+        supabase.table("company_profiles") \
+            .update({"status": "pending"}) \
+            .eq("bse_code", bse_code).execute()
+    except Exception:
+        pass
+
     # save → triggers new review email automatically
     save_company_profile(improved, rejection_count=rejection_count)
+    try:
+        supabase.table("company_profiles") \
+            .update({"rejection_count": rejection_count}) \
+            .eq("bse_code", bse_code).execute()
+        log.info(f"Restored rejection_count={rejection_count} for BSE:{bse_code}")
+    except Exception as e:
+        log.warning(f"Could not restore rejection_count: {e}")
     log.info(f"Regenerated BSE:{bse_code} → status: pending → email sent")

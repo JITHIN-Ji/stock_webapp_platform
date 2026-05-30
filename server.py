@@ -207,7 +207,7 @@ def _smart_schedule_loop():
                 hours_since = (datetime.datetime.now() - last_fallback).total_seconds() / 3600
                 if hours_since >= FALLBACK_HOURS:
                     log.info(f"[SMART SCHEDULE] 24h fallback — full extraction only")
-                    start_extraction(company_name=None)
+                    
                     last_fallback = datetime.datetime.now()
 
         except Exception as e:
@@ -458,8 +458,8 @@ def _startup():
     log.info("QA engine: REMOVED — using company_profiles table")
     log.info("=" * 60)
 
-    # Only run extraction on startup, not scraping
-    start_extraction(company_name="Adani")
+    
+    log.info("Startup complete — extraction via scheduler or /api/scan")
 
     # Start smart scheduler
     t = threading.Thread(target=_smart_schedule_loop, daemon=True)
