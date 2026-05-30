@@ -273,24 +273,89 @@ def _build_email_html(profile: dict, approve_url: str, reject_url: str,
       {table_rows}
     </table>
 
-    <div style="background:#f8f8f8; border-left:3px solid #4a4a4a;
-                padding:12px 16px; border-radius:0 8px 8px 0; margin-bottom:28px;">
-      <p style="margin:0; font-size:13px; line-height:1.6; color:#333;">
-        {verdict}
-      </p>
+    <!-- About -->
+    <div style="background:#f0f4ff;border-left:3px solid #3b5bdb;padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#3b5bdb;text-transform:uppercase;">About</p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#333;">{profile.get("about","")}</p>
     </div>
 
+    <!-- Business Description -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;">Business Description</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;">{profile.get("business_description","")}</p>
+    </div>
+
+    <!-- Key Points -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;">Key Points</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;white-space:pre-line;">{profile.get("key_points","")}</p>
+    </div>
+
+    <!-- Management Outlook -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;">Management Outlook</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;">{profile.get("management_outlook","")}</p>
+    </div>
+
+    <!-- Key Risks -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#c0392b;text-transform:uppercase;">Key Risks</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;white-space:pre-line;">{profile.get("key_risks","")}</p>
+    </div>
+
+    <!-- Opportunities -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#1a7f4b;text-transform:uppercase;">Opportunities</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;">{profile.get("opportunities","")}</p>
+    </div>
+
+    <!-- Expansion Plans -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;">Expansion Plans</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;">{profile.get("expansion_plans","")}</p>
+    </div>
+
+    <!-- Acquisitions -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;">Acquisitions</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;">{profile.get("acquisitions","")}</p>
+    </div>
+
+    <!-- Partnerships -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;">Partnerships</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;">{profile.get("partnerships","")}</p>
+    </div>
+
+    <!-- Client Base -->
+    <div style="margin-bottom:16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;">Client Base</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;">{profile.get("client_data","")}</p>
+    </div>
+
+    <!-- Products & Platforms -->
+    <div style="margin-bottom:20px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;">Products & Platforms</p>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:#444;">{profile.get("products_and_platforms","")}</p>
+    </div>
+
+    <!-- Verdict -->
+    <div style="background:#f8f8f8;border-left:3px solid #4a4a4a;padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:28px;">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#333;">{verdict}</p>
+    </div>
+
+    <!-- Buttons — mobile friendly -->
     <div>
       <a href="{approve_url}"
-         style="display:inline-block; padding:12px 28px; background:#1a7f4b;
-                color:#fff; text-decoration:none; border-radius:8px;
-                font-weight:600; font-size:14px; margin-right:12px;">
+         style="display:block;padding:16px 28px;background:#1a7f4b;
+                color:#fff;text-decoration:none;border-radius:8px;
+                font-weight:600;font-size:16px;margin-bottom:12px;text-align:center;">
         ✓ Approve — Make Visible
       </a>
       <a href="{reject_url}"
-         style="display:inline-block; padding:12px 28px; background:#c0392b;
-                color:#fff; text-decoration:none; border-radius:8px;
-                font-weight:600; font-size:14px;">
+         style="display:block;padding:16px 28px;background:#c0392b;
+                color:#fff;text-decoration:none;border-radius:8px;
+                font-weight:600;font-size:16px;text-align:center;">
         ✗ Reject — Keep Hidden
       </a>
     </div>
