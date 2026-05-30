@@ -731,40 +731,38 @@ def save_company_profile(profile, rejection_count: int = 0):
 # ── Profile status check ──────────────────────────────────────
 
 def is_profile_fresh(identifier, max_age_hours=24):
-    """
-    Returns True if company_profiles has a recent row.
-    Accepts company_name or bse_code.
-    """
     try:
-        from datetime import datetime, timezone, timedelta
-
-        # Try bse_code first
         res = supabase.table("company_profiles") \
-            .select("last_updated") \
+            .select("last_updated, status") \
             .eq("bse_code", identifier) \
             .execute()
 
-        # Fallback to name match
         if not res.data:
             res = supabase.table("company_profiles") \
-                .select("last_updated") \
+                .select("last_updated, status") \
                 .ilike("company_name", f"%{identifier}%") \
                 .execute()
-
+        
         if not res.data:
+            return False  # no profile → extract
+        
+        row = res.data[0]
+        
+        # pending = new PDFs uploaded → always extract
+        if row.get("status") == "pending":
             return False
-
-        last_updated = res.data[0].get("last_updated", "")
+        
+        # approved → check age
+        from datetime import datetime, timezone, timedelta
+        last_updated = row.get("last_updated", "")
         if not last_updated:
             return False
-
         updated_at = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
         age = datetime.now(timezone.utc) - updated_at
         return age < timedelta(hours=max_age_hours)
 
     except Exception:
         return False
-
 
 # ── Public API ────────────────────────────────────────────────
 
