@@ -30,7 +30,7 @@ CATEGORIES = [
 ]
 
 # Max PDFs to send to Gemini per batch (to stay within context limits)
-MAX_PDFS_PER_BATCH = 3
+MAX_PDFS_PER_BATCH = 1
 
 
 # ── Prompts per category ──────────────────────────────────────
@@ -262,7 +262,7 @@ CATEGORY_SIZE_THRESHOLD = {
 }
 
 CATEGORY_PDF_CAP = {
-    "FinancialStatements": 999,  # all 25 — already filtered
+    "FinancialStatements": 20,  # all 25 — already filtered
     "CorporateFilings":     40,
     "RegulatoryFilings":    20,
     "StrategicDocuments":   10,
@@ -333,7 +333,7 @@ def call_gemini(parts, prompt_text):
         model="gemini-2.5-flash",
         contents=contents,
         config=types.GenerateContentConfig(
-            http_options=types.HttpOptions(timeout=120000)  # 120 sec
+            http_options=types.HttpOptions(timeout=240000)
         )
     )
     raw = response.text.strip()

@@ -122,7 +122,8 @@ def _fmt_pct(value) -> str:
         return str(value)
 
 
-def _build_email_html(profile: dict, approve_url: str, reject_url: str) -> str:
+def _build_email_html(profile: dict, approve_url: str, reject_url: str,
+                      regeneration_note: str = "") -> str:
     name    = profile.get("company_name", "Unknown")
     bse     = profile.get("bse_code", "")
     nse     = profile.get("nse_symbol", "")
@@ -260,6 +261,7 @@ def _build_email_html(profile: dict, approve_url: str, reject_url: str) -> str:
     <p style="font-size:12px; color:#e67e22; margin:0 0 16px;">
       ⚠ This company is currently hidden from the UI pending your approval.
     </p>
+    {regeneration_note}
 
     <h2 style="margin:0 0 4px; font-size:22px;">{name}</h2>
     <p style="margin:0 0 24px; color:#666; font-size:13px;">
@@ -300,17 +302,18 @@ def _build_email_html(profile: dict, approve_url: str, reject_url: str) -> str:
 </body>
 </html>
 """
-def _send_single_email(profile: dict, to_email: str) -> bool:
+def _send_single_email(profile: dict, to_email: str,
+                       regeneration_note: str = "") -> bool:
     bse_code     = profile.get("bse_code", "")
     company_name = profile.get("company_name", "Unknown Company")
 
-    approve_token = _generate_token(bse_code, f"approved_{to_email}")
-    reject_token  = _generate_token(bse_code, f"rejected_{to_email}")
+    approve_token = _generate_token(bse_code, "approved")
+    reject_token  = _generate_token(bse_code, "rejected")
     approve_url   = f"{BASE_URL}/api/approve/{approve_token}"
     reject_url    = f"{BASE_URL}/api/reject/{reject_token}"
 
-    html_content = _build_email_html(profile, approve_url, reject_url)
-
+    html_content = _build_email_html(profile, approve_url, reject_url,
+                                  regeneration_note=regeneration_note)
     import uuid
     message_id = f"<review-{bse_code}-{uuid.uuid4()}@wingoraventures.com>"
 
@@ -356,13 +359,24 @@ def notify_stock_master(profile: dict,
         return False
 
     # always send to stockmaster
-    sent = _send_single_email(profile, STOCK_MASTER_EMAIL)
+    note = """
+    <div style="background:#fff3cd; border-left:3px solid #e67e22;
+                padding:10px 16px; border-radius:0 8px 8px 0; margin-bottom:16px;">
+    <p style="margin:0; font-size:12px; color:#856404;">
+        ♻ <b>Regenerated Profile</b> — Updated based on previous rejection feedback.
+        Please review the changes.
+    </p>
+    </div>
+    """ if send_to_holder else ""
 
-    # 2nd attempt onwards → also send to holder
+    sent = _send_single_email(profile, STOCK_MASTER_EMAIL,
+                            regeneration_note=note)
+
     if send_to_holder and COMPANY_HOLDER_EMAIL:
-        _send_single_email(profile, COMPANY_HOLDER_EMAIL)
+        _send_single_email(profile, COMPANY_HOLDER_EMAIL,
+                        regeneration_note=note)
         log.info(f"Also sent to holder: {COMPANY_HOLDER_EMAIL}")
-
+            
     return sent
 
 
@@ -387,10 +401,19 @@ def process_approval(
                 .eq("bse_code", bse_code) \
                 .execute()
         else:
+            # only reject if NOT already approved by someone else
             res = supabase.table("company_profiles") \
                 .update({"status": "rejected"}) \
                 .eq("bse_code", bse_code) \
+                .neq("status", "approved") \
                 .execute()
+            
+            # if already approved → fetch current data for response
+            if not res.data:
+                res = supabase.table("company_profiles") \
+                    .select("*") \
+                    .eq("bse_code", bse_code) \
+                    .execute()
 
         if not res.data:
             return False, action, bse_code
@@ -428,51 +451,134 @@ def process_approval(
 def process_inbound_reply(sender: str, subject: str, body: str) -> bool:
     import re, threading
 
-    # allow stockmaster OR company holder
+    # security check
     allowed = [e for e in [STOCK_MASTER_EMAIL, COMPANY_HOLDER_EMAIL] if e]
     if not any(a.lower() in sender.lower() for a in allowed):
         log.warning(f"Unknown sender: {sender}")
         return False
 
+    # extract BSE code
     match = re.search(r'BSE:(\d+)', subject)
     if not match:
         log.warning(f"No BSE code in subject: {subject}")
         return False
 
     bse_code = match.group(1)
-    log.info(f"Inbound reply for BSE:{bse_code}")
 
+    # fetch profile
     try:
         res = supabase.table("company_profiles") \
-            .select("status, company_name, rejection_count") \
+            .select("status, rejection_count, master_feedback, holder_feedback") \
             .eq("bse_code", bse_code) \
             .limit(1).execute()
 
         if not res.data:
-            log.warning(f"No profile for BSE:{bse_code}")
+            log.warning(f"No profile BSE:{bse_code}")
             return False
 
-        profile = res.data[0]
-        if profile.get("status") != "rejected":
-            log.info(f"BSE:{bse_code} not rejected — skip")
+        profile  = res.data[0]
+        status   = profile.get("status")
+        rej_count = profile.get("rejection_count") or 0
+
+        if status != "rejected":
+            log.info(f"BSE:{bse_code} status={status} not rejected — skip")
             return False
-
-        rejection_count = (profile.get("rejection_count") or 0) + 1
-
-        supabase.table("company_profiles") \
-            .update({"rejection_count": rejection_count}) \
-            .eq("bse_code", bse_code).execute()
 
     except Exception as e:
-        log.error(f"DB check error: {e}")
+        log.error(f"DB fetch error: {e}")
         return False
 
+    # identify sender
+    is_master = STOCK_MASTER_EMAIL.lower() in sender.lower()
+    is_holder = bool(COMPANY_HOLDER_EMAIL) and \
+                COMPANY_HOLDER_EMAIL.lower() in sender.lower()
+
+    # ── ROUND 1: only master got email ────────────────────
+    if rej_count == 0:
+        # only master reply expected → regenerate immediately
+        if is_master:
+            log.info(f"Round 1 master feedback BSE:{bse_code} → regenerating")
+            import extractor
+            threading.Thread(
+                target=extractor.regenerate_with_feedback,
+                args=(bse_code, body, 1),
+                daemon=True
+            ).start()
+            return True
+        else:
+            log.info(f"Round 1: holder replied but only master expected — ignore")
+            return False
+
+    # ── ROUND 2+: both got email ──────────────────────────
+    # save this person's feedback
+    update_field = {}
+    if is_master:
+        update_field["master_feedback"] = body
+        log.info(f"Master feedback saved BSE:{bse_code}")
+    elif is_holder:
+        update_field["holder_feedback"] = body
+        log.info(f"Holder feedback saved BSE:{bse_code}")
+
+    try:
+        supabase.table("company_profiles") \
+            .update(update_field) \
+            .eq("bse_code", bse_code).execute()
+    except Exception as e:
+        log.error(f"Save feedback error: {e}")
+        return False
+
+    # re-fetch to check if both replied
+    try:
+        res2 = supabase.table("company_profiles") \
+            .select("master_feedback, holder_feedback") \
+            .eq("bse_code", bse_code) \
+            .limit(1).execute()
+        row = res2.data[0]
+    except Exception as e:
+        log.error(f"Re-fetch error: {e}")
+        return False
+
+    master_fb = row.get("master_feedback") or ""
+    holder_fb = row.get("holder_feedback") or ""
+
+    # if holder email not configured → only need master
+    if not COMPANY_HOLDER_EMAIL:
+        if not master_fb:
+            return True
+        combined = master_fb
+    else:
+        # need both
+        if not master_fb or not holder_fb:
+            log.info(
+                f"BSE:{bse_code} waiting for both — "
+                f"master:{bool(master_fb)} holder:{bool(holder_fb)}"
+            )
+            return True  # wait for other person
+        combined = (
+            f"Stock Master feedback:\n{master_fb}"
+            f"\n\nCompany Holder feedback:\n{holder_fb}"
+        )
+
+    # clear feedbacks + increment count
+    new_count = rej_count + 1
+    try:
+        supabase.table("company_profiles") \
+            .update({
+                "rejection_count": new_count,
+                "master_feedback":  None,
+                "holder_feedback":  None,
+            }) \
+            .eq("bse_code", bse_code).execute()
+    except Exception:
+        pass
+
+    # trigger regeneration
     import extractor
     threading.Thread(
         target=extractor.regenerate_with_feedback,
-        args=(bse_code, body, rejection_count),
+        args=(bse_code, combined, new_count),
         daemon=True
     ).start()
 
-    log.info(f"Regeneration triggered BSE:{bse_code} attempt:{rejection_count}")
+    log.info(f"Regeneration triggered BSE:{bse_code} round:{new_count}")
     return True
