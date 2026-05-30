@@ -21,7 +21,7 @@ import logging
 import secrets
 import datetime
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, ReplyTo
+from sendgrid.helpers.mail import Mail, ReplyTo, Header
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -327,7 +327,7 @@ def _send_single_email(profile: dict, to_email: str,
         email = os.getenv("REPLY_TO_EMAIL", "reply@reply.wingoraventures.com"),
         name  = "FinSight Review"
     )
-    message.header = {"Message-ID": message_id}
+    message.header = Header("Message-ID", message_id)
 
     try:
         supabase.table("company_profiles") \
